@@ -1,0 +1,9 @@
+torch>=2.0
+torchvision>=0.15
+timm>=0.9
+numpy>=1.23
+opencv-python>=4.8
+Pillow>=9.0
+fvcore>=0.1.5
+einops>=0.6
+setproctitle>=1.3

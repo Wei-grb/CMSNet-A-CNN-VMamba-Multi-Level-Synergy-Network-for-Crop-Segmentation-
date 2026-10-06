@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+
+# Environments and editor settings
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+
+# Data, checkpoints, and experiment artifacts
+data/
+pretrained_weights/
+work_dir/
+work_dirs/
+newwork_dir/
+checkpoints/
+outputs/
+weights/
+*.pth
+*.pt
+*.pth.tar
+*.pkl
+*.pkl.tar
+*.ckpt
+*.log
+
+# Operating-system files
+.DS_Store
+Thumbs.db
