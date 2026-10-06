@@ -432,7 +432,7 @@ def validate(dataloader_val, device, model, args2):
     with torch.no_grad():
         for i, sample in enumerate(dataloader_val):
             image, label = sample['image'], sample['label']
-            alpha = sample['alpha']
+            alpha = sample.get('alpha')
             image, label = image.to(device), label.to(device)
             label = label.long().squeeze(1)
             
@@ -442,7 +442,11 @@ def validate(dataloader_val, device, model, args2):
             label = label.cpu().detach().numpy()
             
             # 使用 alpha 通道过滤背景进行评估
-            metric.addBatch(logit[alpha > 0], label[alpha > 0])
+            if alpha is None:
+                valid = np.ones_like(label, dtype=bool)
+            else:
+                valid = alpha.numpy() > 0
+            metric.addBatch(logit[valid], label[valid])
 
     iou = metric.IntersectionOverUnion()
     acc = metric.Accuracy()
