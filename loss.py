@@ -77,14 +77,12 @@ class Edge_loss(nn.Module):
 
 class EdgeLabelSmoothing(nn.Module):
     '''
-    Cite: https://github.com/lin-honghui/tianchi_CountyAgriculturalBrain_top1/ @ lin.honghui@qq.com
-    Description: 借鉴标签平滑的思想，针对样本中的预假设的 `hard sample`（图像边缘、不同类别交界） 进行标签平滑；
-                 平滑因子可指定 smoothing 固定，或在训练过程中，在图像边缘、类间交界设置一定大小过渡带，统计过渡带
-                 内像素 `hard sample` 比例动态调整。
+    Label smoothing for pixels near image edges and class boundaries.
     Args (type):
-        win_size (int): 过渡带窗口大小；
-        num_classes (int): 总类别数目，本次实验类别数为5；
-        smoothing (float): 默认值为0.1，若指定 fix_smoothing ，则固定训练过程固定平滑因子为 smoothing。
+        win_size (int): Width of the boundary transition band.
+        num_classes (int): Number of semantic classes.
+        smoothing (float): Initial smoothing factor.
+        fix_smoothing (bool): Keep the smoothing factor fixed during training.
     '''
 
     def __init__(self, win_size=11, num_classes=4, smoothing=0.1, fix_smoothing=False):
@@ -367,7 +365,6 @@ class Lovasz_loss(nn.Module):
         else:
             loss = self.lovasz_softmax_flat(*self.flatten_probas(probas, labels, ignore), classes=classes)
         return loss
-
 
 
 

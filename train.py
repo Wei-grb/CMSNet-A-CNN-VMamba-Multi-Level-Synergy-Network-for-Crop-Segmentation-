@@ -19,25 +19,25 @@ from dataset import RemoteData
 from custom_transforms import Mixup, edge_contour
 from loss import CrossEntropyLoss, Edge_loss, Edge_weak_loss
 
-# ================= 新增：多类别 Dice Loss =================
+# ================= Multiclass Dice loss =================
 class DiceLoss(nn.Module):
     def __init__(self, smooth=1e-5):
         super(DiceLoss, self).__init__()
         self.smooth = smooth
 
     def forward(self, output, target):
-        # output 形状: [B, C, H, W]
-        # target 形状: [B, H, W]
+        # output: [B, C, H, W]
+        # target: [B, H, W]
         num_classes = output.shape[1]
         
-        # 将 target 转为 one-hot 编码，形状变为 [B, C, H, W]
+        # Convert the target to one-hot format: [B, C, H, W].
         target_one_hot = F.one_hot(target, num_classes=num_classes).permute(0, 3, 1, 2).float()
         
-        # 对 output 在通道维度做 softmax
+        # Apply softmax over the class dimension.
         output_softmax = F.softmax(output, dim=1)
         
         dice_loss = 0.0
-        # 对每个类别分别计算 Dice，然后求均值
+        # Compute Dice for each class and average the losses.
         for i in range(num_classes):
             o_c = output_softmax[:, i, ...]
             t_c = target_one_hot[:, i, ...]
@@ -50,7 +50,7 @@ class DiceLoss(nn.Module):
             
         return (dice_loss / num_classes).mean()
 
-# ================= 修改：集成了组合损失的 FullModel =================
+# ================= Training wrapper with the compound loss =================
 class FullModel(nn.Module):
     def __init__(self, model, args2):
         super(FullModel, self).__init__()
@@ -60,7 +60,7 @@ class FullModel(nn.Module):
 
         self.ce_loss = CrossEntropyLoss()
         self.edge_loss = Edge_loss()
-        self.dice_loss = DiceLoss() # 初始化 DiceLoss
+        self.dice_loss = DiceLoss()
 
         if self.use_mixup:
             self.mixup = Mixup(use_edge=args2.use_edge)
@@ -101,7 +101,7 @@ class FullModel(nn.Module):
                 losses = self.ce_loss(output, label) + self.dice_loss(output, label)
             return losses
         else:
-            # 验证模式：只取第一个主输出
+            # During evaluation, return the main output only.
             return output[0] if isinstance(output, (list, tuple)) else output
 
 def get_model(args2, device, models='danet'):
@@ -216,8 +216,8 @@ class AverageMeter(object):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train CMSNet')
-    parser.add_argument("--data_dir", type=str, default='./data', help="手动指定数据集的实际完整路径")
-    parser.add_argument("--save_dir", type=str, default='./newwork_dir', help="权重及输出的实际保存路径")
+    parser.add_argument("--data_dir", type=str, default='./data', help="Path to the dataset root")
+    parser.add_argument("--save_dir", type=str, default='./newwork_dir', help="Directory for checkpoints and logs")
     parser.add_argument("--dataset", type=str, default='barley', choices=['barley'])
     parser.add_argument("--end_epoch", type=int, default=50)
     parser.add_argument("--warm_epochs", type=int, default=5)
@@ -295,7 +295,7 @@ def train():
         num_workers=4,
         pin_memory=True)
 
-    # 保持统一学习率设置
+    # Use one learning-rate schedule for all trainable parameters.
     optimizer = torch.optim.AdamW([{'params':
                                         filter(lambda p: p.requires_grad,
                                                model.parameters()),
@@ -441,7 +441,7 @@ def validate(dataloader_val, device, model, args2):
             logit = logit.cpu().detach().numpy()
             label = label.cpu().detach().numpy()
             
-            # 使用 alpha 通道过滤背景进行评估
+            # Use the alpha channel to exclude invalid pixels when available.
             if alpha is None:
                 valid = np.ones_like(label, dtype=bool)
             else:
