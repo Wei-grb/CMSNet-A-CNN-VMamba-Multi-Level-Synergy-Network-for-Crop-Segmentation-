@@ -91,9 +91,7 @@ Use the independent test split only after model selection:
 python test.py \
   --data_dir ./data \
   --checkpoint ./work_dirs/cmsnet_lr0.0001_epoch50_batchsize4_RS/weights/best_weight.pkl \
-  --split test \
-  --crop_size 512 \
-  --stride 341
+  --crop_size 512 512
 ```
 
 The supplied `test.py` evaluates the valid pixels from all overlapping test
