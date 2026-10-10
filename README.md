@@ -64,9 +64,9 @@ python train.py \
   --models cmsnet \
   --data_dir ./data \
   --save_dir ./work_dirs \
-  --end_epoch 50 \
+  --end_epoch 100 \
   --lr 0.0001 \
-  --train_batchsize 4 \
+  --train_batchsize 8 \
   --val_batchsize 4 \
   --crop_size 512 512 \
   --seed 6
