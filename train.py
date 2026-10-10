@@ -104,51 +104,35 @@ class FullModel(nn.Module):
             # During evaluation, return the main output only.
             return output[0] if isinstance(output, (list, tuple)) else output
 
-def get_model(args2, device, models='danet'):
-    if models in ['swinT', 'resT', 'beit', 'cswin', 'volo']:
-        print(models, args2.head)
-    elif models in ['transformer', 'cctnet']:
-        print(models, args2.trans_cnn, args2.head)
-    else:
-        print(models)
+MODEL_CHOICES = (
+    'cmsnet', 'vmamba', 'rs3mamba', 'cctnet', 'deeplabv3', 'unet', 'danet',
+    'unetmamba', 'unettran',
+)
+
+
+def get_model(args2, device, models='cmsnet'):
+    """Build one of the models retained in the revised comparison protocol."""
+    if models not in MODEL_CHOICES:
+        raise ValueError(f"Unsupported model '{models}'. Choose from: {MODEL_CHOICES}")
 
     nclass = 4
 
-    assert models in ['danet', 'bisenetv2', 'pspnet', 'segbase', 'swinT', 'beit', 'cswin',
-                      'deeplabv3', 'fcn', 'fpn', 'unet', 'resT', 'cctnet', 'volo', 'banet',
-                      'transformer', 'rmdnet', 'cmsnet']
-    
-    if models in ['cmsnet', 'rmdnet']:
+    if models == 'cmsnet':
         print("Initializing CMSNet (Dual-Branch + Multi-Head)...")
-        from models.cmsnet import create_model 
         model = create_model(num_classes=nclass, input_size=args2.crop_size[0])
+    elif models == 'vmamba':
+        print("Initializing the VMamba-only baseline...")
+        model = create_model(
+            num_classes=nclass,
+            input_size=args2.crop_size[0],
+            mode='mamba_only',
+        )
     elif models == 'danet':
         from models.danet import DANet
         model = DANet(nclass=nclass, backbone='resnet50', pretrained_base=True)
-    elif models == 'bisenetv2':
-        from models.bisenetv2 import BiSeNetV2
-        model = BiSeNetV2(nclass=nclass)
-    elif models == 'pspnet':
-        from models.pspnet import PSPNet
-        model = PSPNet(nclass=nclass, backbone='resnet50', pretrained_base=True)
-    elif models == 'segbase':
-        from models.segbase import SegBase
-        model = SegBase(nclass=nclass, backbone='resnet50', pretrained_base=True)
-    elif models == 'swinT':
-        from models.swinT import swin_tiny as swinT
-        model = swinT(nclass=nclass, pretrained=True, aux=True, head=args2.head, edge_aux=args2.use_edge)
-    elif models == 'resT':
-        from models.resT import rest_tiny as resT
-        model = resT(nclass=nclass, pretrained=True, aux=True, head=args2.head, edge_aux=args2.use_edge)
     elif models == 'deeplabv3':
         from models.deeplabv3 import DeepLabV3
         model = DeepLabV3(nclass=nclass, backbone='resnet50', pretrained_base=True)
-    elif models == 'fcn':
-        from models.fcn import FCN16s
-        model = FCN16s(nclass=nclass)
-    elif models == 'fpn':
-        from models.fpn import FPN
-        model = FPN(nclass=nclass)
     elif models == 'unet':
         from models.unet import UNet
         model = UNet(nclass=nclass)
@@ -157,25 +141,11 @@ def get_model(args2, device, models='danet'):
         model = CCTNet(transformer_name=args2.trans_cnn[0], cnn_name=args2.trans_cnn[1], nclass=nclass,
                        img_size=args2.crop_size[0],
                        pretrained=True, aux=True, head=args2.head, edge_aux=args2.use_edge)
-    elif models == 'beit':
-        from models.beit import beit_base as beit
-        model = beit(nclass=nclass, img_size=args2.crop_size[0], pretrained=True, aux=True, head=args2.head,
-                     edge_aux=args2.use_edge)
-    elif models == 'cswin':
-        from models.cswin import cswin_tiny as cswin
-        model = cswin(nclass=nclass, img_size=args2.crop_size[0], pretrained=True, aux=True, head=args2.head,
-                      edge_aux=args2.use_edge)
-    elif models == 'volo':
-        from models.volo import volo_d1 as volo
-        model = volo(nclass=nclass, img_size=args2.crop_size[0], pretrained=True, aux=True, head=args2.head,
-                     edge_aux=args2.use_edge)
-    elif models == 'banet':
-        from models.banet import BANet
-        model = BANet(nclass=nclass)
-    elif models == 'transformer':
-        from models.transformer import Transformer
-        model = Transformer(transformer_name=args2.trans_cnn[0], nclass=nclass, img_size=args2.crop_size[0],
-                            pretrained=True, aux=True, head=args2.head, edge_aux=args2.use_edge)
+    elif models in {'rs3mamba', 'unetmamba', 'unettran'}:
+        raise ImportError(
+            f"The {models} implementation is not included in this repository. "
+            "Add its model file under models/ before selecting this option."
+        )
 
     model = FullModel(model, args2)
     model = model.to(device)
@@ -219,16 +189,14 @@ def parse_args():
     parser.add_argument("--data_dir", type=str, default='./data', help="Path to the dataset root")
     parser.add_argument("--save_dir", type=str, default='./newwork_dir', help="Directory for checkpoints and logs")
     parser.add_argument("--dataset", type=str, default='barley', choices=['barley'])
-    parser.add_argument("--end_epoch", type=int, default=50)
+    parser.add_argument("--end_epoch", type=int, default=100)
     parser.add_argument("--warm_epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=0.0001)
-    parser.add_argument("--train_batchsize", type=int, default=4)
+    parser.add_argument("--train_batchsize", type=int, default=8)
     parser.add_argument("--val_batchsize", type=int, default=4)
     parser.add_argument("--crop_size", type=int, nargs='+', default=[512, 512], help='H, W')
     parser.add_argument("--information", type=str, default='RS')
-    parser.add_argument("--models", type=str, default='cmsnet',
-                        choices=['danet', 'bisenetv2', 'pspnet', 'segbase', 'resT', 'beit', 'cswin',
-                                 'swinT', 'deeplabv3', 'fcn', 'fpn', 'unet', 'cctnet', 'volo', 'banet', 'transformer', 'rmdnet', 'cmsnet'])
+    parser.add_argument("--models", type=str, default='cmsnet', choices=MODEL_CHOICES)
     parser.add_argument("--head", type=str, default='seghead')
     parser.add_argument("--trans_cnn", type=str, nargs='+', default=['cswin_tiny', 'resnet50'], help='transformer, cnn')
     parser.add_argument("--seed", type=int, default=6)
